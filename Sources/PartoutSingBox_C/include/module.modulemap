@@ -1,0 +1,4 @@
+module _PartoutSingBox_C {
+    header "singbox/singbox.h"
+    export *
+}

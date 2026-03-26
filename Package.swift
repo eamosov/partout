@@ -221,7 +221,8 @@ if areas.contains(.openVPN) {
                 name: "PartoutOpenVPNConnection",
                 dependencies: [
                     "PartoutOpenVPN",
-                    "PartoutOpenVPN_C"
+                    "PartoutOpenVPN_C",
+                    "PartoutSingBox_C"
                 ]
             ),
             .testTarget(
@@ -302,6 +303,26 @@ if areas.contains(.wireGuard) {
             exclude: useFoundationCompatibility.wireGuardTestsExclude
         )
     ])
+}
+
+// MARK: SingBox
+
+do {
+    let packageRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
+    let singBoxBuildDir = env["SING_BOX_OUTPUT_DIR"] ?? "\(packageRoot)/vendors/sing-box/build"
+    package.targets.append(
+        .target(
+            name: "PartoutSingBox_C",
+            cSettings: globalCSettings + [
+                .unsafeFlags(["-I\(singBoxBuildDir)/include"])
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-L\(singBoxBuildDir)/lib"]),
+                .linkedLibrary("singbox"),
+                .linkedLibrary("resolv")
+            ]
+        )
+    )
 }
 
 // MARK: - Crypto

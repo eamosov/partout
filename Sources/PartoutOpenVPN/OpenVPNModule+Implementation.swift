@@ -10,12 +10,16 @@ extension OpenVPNModule {
 
         public let connectionBlock: @Sendable (ConnectionParameters, OpenVPNModule) throws -> Connection
 
+        public let singBoxRunnerBlock: (@Sendable () -> SingBoxRunner)?
+
         public init(
             importerBlock: @escaping @Sendable () -> ModuleImporter,
-            connectionBlock: @escaping @Sendable (ConnectionParameters, OpenVPNModule) throws -> Connection
+            connectionBlock: @escaping @Sendable (ConnectionParameters, OpenVPNModule) throws -> Connection,
+            singBoxRunnerBlock: (@Sendable () -> SingBoxRunner)? = nil
         ) {
             self.importerBlock = importerBlock
             self.connectionBlock = connectionBlock
+            self.singBoxRunnerBlock = singBoxRunnerBlock
         }
     }
 }

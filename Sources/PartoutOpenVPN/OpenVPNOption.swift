@@ -111,6 +111,10 @@ extension OpenVPN {
         // MARK: Extra
 
         case xorInfo = "^scramble +(xormask|xorptrpos|reverse|obfuscate)[\\s]?([^\\s]+)?"
+
+        // MARK: SingBox
+
+        case singBox = "^(setenv-safe |setenv )?sb_(enable|override_address|override_port|server_port|uuid|tls_server_name|tls_public_key|tls_short_id) +[^ ]+"
     }
 }
 

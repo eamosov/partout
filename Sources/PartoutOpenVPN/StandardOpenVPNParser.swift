@@ -55,8 +55,8 @@ public final class StandardOpenVPNParser {
         return ($0, rx)
     }
 
-    public init(decrypter: (KeyDecrypter & Sendable)?) {
-        supportsLZO = false
+    public init(decrypter: (KeyDecrypter & Sendable)? = nil, supportsLZO: Bool = true) {
+        self.supportsLZO = supportsLZO
         self.decrypter = decrypter
     }
 

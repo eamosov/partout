@@ -64,7 +64,7 @@ public actor CyclingConnection {
 
     private let options: ConnectionParameters.Options
 
-    private let endpoints: [ExtendedEndpoint]
+    private var endpoints: [ExtendedEndpoint]
 
     private nonisolated let statusSubject: CurrentValueStream<ConnectionStatus>
 
@@ -103,6 +103,12 @@ public actor CyclingConnection {
     /// - Parameter hooks: The new ``CyclingConnection/Hooks`` object.
     public func setHooks(_ hooks: Hooks) {
         self.hooks = hooks
+    }
+
+    /// Replaces the endpoint list (e.g. for sing-box local redirect).
+    public func replaceEndpoints(_ newEndpoints: [ExtendedEndpoint]) {
+        endpoints = newEndpoints
+        endpointResolver = EndpointResolver(ctx, endpoints: newEndpoints)
     }
 }
 

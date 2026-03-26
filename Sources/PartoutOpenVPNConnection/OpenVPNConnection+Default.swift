@@ -8,12 +8,22 @@ extension OpenVPNConnection {
         parameters: ConnectionParameters,
         module: OpenVPNModule,
         cachesURL: URL,
+        singBoxRunner: SingBoxRunner? = nil,
         options: Options = .init()
     ) throws {
         guard let configuration = module.configuration else {
             fatalError("Creating session without OpenVPN configuration?")
         }
         pp_log(ctx, .openvpn, .notice, "OpenVPN: Using cross-platform connection")
+
+        // Set up sing-box sidecar if configured
+        let sidecar: SingBoxSidecar?
+        if let sbConfig = SingBoxSidecar.Configuration(from: configuration),
+           let runner = singBoxRunner {
+            sidecar = SingBoxSidecar(ctx, configuration: sbConfig, runner: runner)
+        } else {
+            sidecar = nil
+        }
 
         // Hardcode portable implementations
         let prng = PlatformPRNG()
@@ -43,6 +53,7 @@ extension OpenVPNConnection {
             module: module,
             prng: prng,
             dns: dns,
+            singBoxSidecar: sidecar,
             sessionFactory: sessionFactory
         )
     }

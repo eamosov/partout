@@ -29,6 +29,10 @@ public actor OpenVPNConnection {
 
     private let dns: DNSResolver
 
+    // MARK: SingBox
+
+    private let singBoxSidecar: SingBoxSidecar?
+
     // MARK: State
 
     private var hooks: CyclingConnection.Hooks?
@@ -41,6 +45,7 @@ public actor OpenVPNConnection {
         module: OpenVPNModule,
         prng: PRNGProtocol,
         dns: DNSResolver,
+        singBoxSidecar: SingBoxSidecar? = nil,
         sessionFactory: @escaping () async throws -> OpenVPNSessionProtocol
     ) throws {
         self.ctx = ctx
@@ -52,12 +57,23 @@ public actor OpenVPNConnection {
         guard let configuration = module.configuration else {
             throw PartoutError(.incompleteModule)
         }
-        guard let endpoints = configuration.processedRemotes(prng: prng),
-              !endpoints.isEmpty else {
-            fatalError("No OpenVPN remotes defined?")
+
+        var endpoints: [ExtendedEndpoint]
+        if singBoxSidecar != nil {
+            // When sing-box is active, OpenVPN connects to the local sidecar via TCP
+            // The actual port will be set after sidecar starts; use placeholder
+            pp_log(ctx, .openvpn, .notice, "SingBox: Will redirect OpenVPN through local sidecar")
+            endpoints = [try ExtendedEndpoint("127.0.0.1", .init(.tcp, 0))]
+        } else {
+            guard let remotes = configuration.processedRemotes(prng: prng),
+                  !remotes.isEmpty else {
+                fatalError("No OpenVPN remotes defined?")
+            }
+            endpoints = remotes
         }
 
         self.configuration = try configuration.withModules(from: parameters.profile)
+        self.singBoxSidecar = singBoxSidecar
         self.sessionFactory = sessionFactory
         self.dns = dns
 
@@ -83,17 +99,27 @@ extension OpenVPNConnection: Connection {
 
     @discardableResult
     public func start() async throws -> Bool {
+        // Start sing-box sidecar if configured (matching OpenVPNService.startOpenVPN in ics-openvpn)
+        if let singBoxSidecar {
+            let port = try await singBoxSidecar.start()
+            // Update backend endpoints to point to the sidecar's local port
+            let localEndpoint = try ExtendedEndpoint("127.0.0.1", .init(.tcp, port))
+            await backend.replaceEndpoints([localEndpoint])
+        }
+
         var session: OpenVPNSessionProtocol?
         do {
             session = try await bindIfNeeded()
             return try await backend.start()
         } catch let error as PartoutError {
+            await singBoxSidecar?.stop()
             await session?.shutdown(error)
             if error.code == .exhaustedEndpoints, let reason = error.reason {
                 throw reason
             }
             throw error
         } catch {
+            await singBoxSidecar?.stop()
             await session?.shutdown(error)
             throw error
         }
@@ -101,6 +127,7 @@ extension OpenVPNConnection: Connection {
 
     public func stop(timeout: Int) async {
         await backend.stop(timeout: timeout)
+        await singBoxSidecar?.stop()
     }
 }
 

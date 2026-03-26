@@ -244,6 +244,32 @@ extension OpenVPN {
         /// - Seealso: `Configuration.Builder.xorMethod`
         public let xorMethod: ObfuscationMethod?
 
+        // MARK: SingBox
+
+        /// - Seealso: `Configuration.Builder.singBoxEnabled`
+        public let singBoxEnabled: Bool?
+
+        /// - Seealso: `Configuration.Builder.singBoxUUID`
+        public let singBoxUUID: String?
+
+        /// - Seealso: `Configuration.Builder.singBoxServerPort`
+        public let singBoxServerPort: UInt16?
+
+        /// - Seealso: `Configuration.Builder.singBoxTLSServerName`
+        public let singBoxTLSServerName: String?
+
+        /// - Seealso: `Configuration.Builder.singBoxTLSPublicKey`
+        public let singBoxTLSPublicKey: String?
+
+        /// - Seealso: `Configuration.Builder.singBoxTLSShortId`
+        public let singBoxTLSShortId: String?
+
+        /// - Seealso: `Configuration.Builder.singBoxOverrideAddress`
+        public let singBoxOverrideAddress: String?
+
+        /// - Seealso: `Configuration.Builder.singBoxOverridePort`
+        public let singBoxOverridePort: UInt16?
+
         // MARK: Shortcuts
 
         public var fallbackCipher: Cipher {
@@ -419,6 +445,32 @@ extension OpenVPN.Configuration {
         /// The method to follow in regards to the XOR patch.
         public var xorMethod: OpenVPN.ObfuscationMethod?
 
+        // MARK: SingBox
+
+        /// Whether sing-box VLESS/Reality tunnel is enabled.
+        public var singBoxEnabled: Bool?
+
+        /// The VLESS UUID credential.
+        public var singBoxUUID: String?
+
+        /// The VLESS server port (defaults to 443).
+        public var singBoxServerPort: UInt16?
+
+        /// The TLS SNI for REALITY.
+        public var singBoxTLSServerName: String?
+
+        /// The REALITY public key.
+        public var singBoxTLSPublicKey: String?
+
+        /// The REALITY short ID.
+        public var singBoxTLSShortId: String?
+
+        /// The real OpenVPN server address that sing-box forwards to.
+        public var singBoxOverrideAddress: String?
+
+        /// The real OpenVPN server port that sing-box forwards to.
+        public var singBoxOverridePort: UInt16?
+
         /**
          Creates a `Configuration.Builder`.
 
@@ -494,7 +546,15 @@ extension OpenVPN.Configuration {
                 proxyBypassDomains: proxyBypassDomains,
                 routingPolicies: routingPolicies,
                 noPullMask: noPullMask,
-                xorMethod: xorMethod
+                xorMethod: xorMethod,
+                singBoxEnabled: singBoxEnabled,
+                singBoxUUID: singBoxUUID,
+                singBoxServerPort: singBoxServerPort,
+                singBoxTLSServerName: singBoxTLSServerName,
+                singBoxTLSPublicKey: singBoxTLSPublicKey,
+                singBoxTLSShortId: singBoxTLSShortId,
+                singBoxOverrideAddress: singBoxOverrideAddress,
+                singBoxOverridePort: singBoxOverridePort
             )
         }
     }
@@ -551,6 +611,14 @@ extension OpenVPN.Configuration {
         builder.routingPolicies = routingPolicies
         builder.noPullMask = noPullMask
         builder.xorMethod = xorMethod
+        builder.singBoxEnabled = singBoxEnabled
+        builder.singBoxUUID = singBoxUUID
+        builder.singBoxServerPort = singBoxServerPort
+        builder.singBoxTLSServerName = singBoxTLSServerName
+        builder.singBoxTLSPublicKey = singBoxTLSPublicKey
+        builder.singBoxTLSShortId = singBoxTLSShortId
+        builder.singBoxOverrideAddress = singBoxOverrideAddress
+        builder.singBoxOverridePort = singBoxOverridePort
         return builder
     }
 }
@@ -700,6 +768,22 @@ extension OpenVPN.Configuration {
 
         if isLocal, let noPullMask {
             pp_log(ctx, .openvpn, .notice, "\tNot pulled: \(noPullMask.map(\.rawValue))")
+        }
+
+        if singBoxEnabled ?? false {
+            pp_log(ctx, .openvpn, .notice, "\tSingBox: enabled")
+            if let singBoxServerPort {
+                pp_log(ctx, .openvpn, .notice, "\tSingBox server port: \(singBoxServerPort)")
+            }
+            if let singBoxTLSServerName {
+                pp_log(ctx, .openvpn, .notice, "\tSingBox TLS server name: \(singBoxTLSServerName.asSensitiveAddress(ctx))")
+            }
+            if let singBoxOverrideAddress {
+                pp_log(ctx, .openvpn, .notice, "\tSingBox override address: \(singBoxOverrideAddress.asSensitiveAddress(ctx))")
+            }
+            if let singBoxOverridePort {
+                pp_log(ctx, .openvpn, .notice, "\tSingBox override port: \(singBoxOverridePort)")
+            }
         }
     }
 }

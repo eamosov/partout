@@ -54,6 +54,15 @@ extension StandardOpenVPNParser {
         private var optRouteNoPull: Bool?
         //
         private var optXorMethod: OpenVPN.ObfuscationMethod?
+        //
+        private var optSingBoxEnabled: Bool?
+        private var optSingBoxUUID: String?
+        private var optSingBoxServerPort: UInt16?
+        private var optSingBoxTLSServerName: String?
+        private var optSingBoxTLSPublicKey: String?
+        private var optSingBoxTLSShortId: String?
+        private var optSingBoxOverrideAddress: String?
+        private var optSingBoxOverridePort: UInt16?
 
         private var optWarning: StandardOpenVPNParserError?
         private var currentBlockName: String?
@@ -493,6 +502,42 @@ extension StandardOpenVPNParser.Builder {
             default:
                 break
             }
+
+            // MARK: SingBox
+
+        case .singBox:
+            // Components may be: ["sb_key", "value"] or ["setenv", "sb_key", "value"] or ["setenv-safe", "sb_key", "value"]
+            let key: String
+            let value: String
+            if components.count == 3 && (components[0] == "setenv" || components[0] == "setenv-safe") {
+                key = components[1]
+                value = components[2]
+            } else if components.count == 2 {
+                key = components[0]
+                value = components[1]
+            } else {
+                break
+            }
+            switch key {
+            case "sb_enable":
+                optSingBoxEnabled = (value == "true" || value == "1")
+            case "sb_uuid":
+                optSingBoxUUID = value
+            case "sb_server_port":
+                optSingBoxServerPort = UInt16(value)
+            case "sb_tls_server_name":
+                optSingBoxTLSServerName = value
+            case "sb_tls_public_key":
+                optSingBoxTLSPublicKey = value
+            case "sb_tls_short_id":
+                optSingBoxTLSShortId = value
+            case "sb_override_address":
+                optSingBoxOverrideAddress = value
+            case "sb_override_port":
+                optSingBoxOverridePort = UInt16(value)
+            default:
+                break
+            }
         }
     }
 
@@ -743,6 +788,17 @@ extension StandardOpenVPNParser.Builder {
         // MARK: Extra
 
         builder.xorMethod = optXorMethod
+
+        // MARK: SingBox
+
+        builder.singBoxEnabled = optSingBoxEnabled
+        builder.singBoxUUID = optSingBoxUUID
+        builder.singBoxServerPort = optSingBoxServerPort
+        builder.singBoxTLSServerName = optSingBoxTLSServerName
+        builder.singBoxTLSPublicKey = optSingBoxTLSPublicKey
+        builder.singBoxTLSShortId = optSingBoxTLSShortId
+        builder.singBoxOverrideAddress = optSingBoxOverrideAddress
+        builder.singBoxOverridePort = optSingBoxOverridePort
 
         //
 
