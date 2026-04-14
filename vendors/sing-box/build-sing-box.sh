@@ -68,8 +68,10 @@ if [ ! -f "${SING_BOX_SRC}/cmd/capi/main.go" ]; then
 fi
 
 # --- Skip if up to date ---
+# Compare against the source in vendors/sing-box/capi/ (not the copy in sing-box submodule)
+# to avoid rebuilding when the copy is newer due to fresh checkout
 if [ -f "${OUTPUT_LIB}" ]; then
-    NEWER=$(find "${SING_BOX_SRC}/cmd/capi" -name '*.go' -newer "${OUTPUT_LIB}" 2>/dev/null | head -1)
+    NEWER=$(find "${SCRIPT_DIR}/capi" -name '*.go' -newer "${OUTPUT_LIB}" 2>/dev/null | head -1)
     if [ -z "${NEWER}" ]; then
         echo "sing-box library is up to date, skipping"
         exit 0
