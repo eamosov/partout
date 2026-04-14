@@ -54,9 +54,17 @@ if [ ! -f "${SING_BOX_SRC}/go.mod" ]; then
     exit 1
 fi
 
+# Copy C API wrapper into sing-box source if not present
 if [ ! -f "${SING_BOX_SRC}/cmd/capi/main.go" ]; then
-    echo "error: C API wrapper not found at ${SING_BOX_SRC}/cmd/capi/main.go" >&2
-    exit 1
+    CAPI_SRC="${SCRIPT_DIR}/capi/main.go"
+    if [ -f "${CAPI_SRC}" ]; then
+        echo "Copying C API wrapper from ${CAPI_SRC}"
+        mkdir -p "${SING_BOX_SRC}/cmd/capi"
+        cp "${CAPI_SRC}" "${SING_BOX_SRC}/cmd/capi/main.go"
+    else
+        echo "error: C API wrapper not found at ${SING_BOX_SRC}/cmd/capi/main.go or ${CAPI_SRC}" >&2
+        exit 1
+    fi
 fi
 
 # --- Skip if up to date ---

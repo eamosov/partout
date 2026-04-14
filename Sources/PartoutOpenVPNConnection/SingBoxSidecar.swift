@@ -78,6 +78,7 @@ public final class SingBoxSidecar: Sendable {
 
         pp_log(ctx, .openvpn, .notice, "SingBox: Starting sidecar on 127.0.0.1:\(port)")
         pp_log(ctx, .openvpn, .info, "SingBox: Override \(configuration.overrideAddress):\(configuration.overridePort)")
+        pp_log(ctx, .openvpn, .debug, "SingBox: Config JSON: \(configJSON)")
 
         try await runner.start(configJSON: configJSON)
 
