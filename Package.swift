@@ -222,7 +222,8 @@ if areas.contains(.openVPN) {
                 dependencies: [
                     "PartoutOpenVPN",
                     "PartoutOpenVPN_C",
-                    "PartoutSingBox_C"
+                    "PartoutSingBox_C",
+                    "PartoutYdtun_C"
                 ]
             ),
             .testTarget(
@@ -319,6 +320,26 @@ do {
             linkerSettings: [
                 .unsafeFlags(["-L\(singBoxBuildDir)/lib"]),
                 .linkedLibrary("singbox"),
+                .linkedLibrary("resolv")
+            ]
+        )
+    )
+}
+
+// MARK: Ydtun
+
+do {
+    let packageRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent().path
+    let ydtunBuildDir = env["YDTUN_OUTPUT_DIR"] ?? "\(packageRoot)/vendors/ydtun/build"
+    package.targets.append(
+        .target(
+            name: "PartoutYdtun_C",
+            cSettings: globalCSettings + [
+                .unsafeFlags(["-I\(ydtunBuildDir)/include"])
+            ],
+            linkerSettings: [
+                .unsafeFlags(["-L\(ydtunBuildDir)/lib"]),
+                .linkedLibrary("ydtun"),
                 .linkedLibrary("resolv")
             ]
         )

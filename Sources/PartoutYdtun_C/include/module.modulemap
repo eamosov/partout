@@ -1,0 +1,4 @@
+module _PartoutYdtun_C {
+    header "ydtun/ydtun.h"
+    export *
+}

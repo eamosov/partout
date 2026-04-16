@@ -63,6 +63,13 @@ extension StandardOpenVPNParser {
         private var optSingBoxTLSShortId: String?
         private var optSingBoxOverrideAddress: String?
         private var optSingBoxOverridePort: UInt16?
+        //
+        private var optTelemostEnabled: Bool?
+        private var optTelemostUrls: String?
+        private var optTelemostTunnelKey: String?
+        private var optTelemostForceTcpRelay: Bool?
+        private var optTelemostLogLevel: Int?
+        private var optTelemostNetGateway: String?
 
         private var optWarning: StandardOpenVPNParserError?
         private var currentBlockName: String?
@@ -538,6 +545,37 @@ extension StandardOpenVPNParser.Builder {
             default:
                 break
             }
+
+            // MARK: Ydtun (Telemost)
+
+        case .telemost:
+            let key: String
+            let value: String
+            if components.count == 3 && (components[0] == "setenv" || components[0] == "setenv-safe") {
+                key = components[1]
+                value = components[2]
+            } else if components.count == 2 {
+                key = components[0]
+                value = components[1]
+            } else {
+                break
+            }
+            switch key {
+            case "telemost_enable":
+                optTelemostEnabled = (value == "true" || value == "1")
+            case "telemost_urls":
+                optTelemostUrls = value
+            case "telemost_tunnel_key":
+                optTelemostTunnelKey = value
+            case "telemost_force_tcp_relay":
+                optTelemostForceTcpRelay = (value == "true" || value == "1")
+            case "telemost_log_level":
+                optTelemostLogLevel = Int(value)
+            case "telemost_net_gateway":
+                optTelemostNetGateway = value
+            default:
+                break
+            }
         }
     }
 
@@ -799,6 +837,15 @@ extension StandardOpenVPNParser.Builder {
         builder.singBoxTLSShortId = optSingBoxTLSShortId
         builder.singBoxOverrideAddress = optSingBoxOverrideAddress
         builder.singBoxOverridePort = optSingBoxOverridePort
+
+        // MARK: Ydtun (Telemost)
+
+        builder.telemostEnabled = optTelemostEnabled
+        builder.telemostUrls = optTelemostUrls
+        builder.telemostTunnelKey = optTelemostTunnelKey
+        builder.telemostForceTcpRelay = optTelemostForceTcpRelay
+        builder.telemostLogLevel = optTelemostLogLevel
+        builder.telemostNetGateway = optTelemostNetGateway
 
         //
 

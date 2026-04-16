@@ -34,12 +34,15 @@ extension Profile {
         applicableModules.forEach {
             let moduleDescription = LoggableModule(ctx, $0)
                 .debugDescription(withSensitiveData: ctx.logger.logsModules)
+            let truncatedDescription = moduleDescription.count > 300
+                ? String(moduleDescription.prefix(300)) + "...(\(moduleDescription.count) chars)"
+                : moduleDescription
 
             if let applicableModule = $0 as? Module & NESettingsApplying {
-                pp_log(ctx, .os, .info, "\t+ \(type(of: $0)): \(moduleDescription)")
+                pp_log(ctx, .os, .info, "\t+ \(type(of: $0)): \(truncatedDescription)")
                 applicableModule.apply(ctx, to: &neSettings)
             } else {
-                pp_log(ctx, .os, .info, "\t- \(type(of: $0)): \(moduleDescription)")
+                pp_log(ctx, .os, .info, "\t- \(type(of: $0)): \(truncatedDescription)")
             }
         }
 

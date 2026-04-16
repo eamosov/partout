@@ -33,11 +33,16 @@ public actor OpenVPNConnection {
 
     private let singBoxSidecar: SingBoxSidecar?
 
+    // MARK: Ydtun
+
+    private let ydtunSidecar: YdtunSidecar?
+
     // MARK: State
 
     private var hooks: CyclingConnection.Hooks?
 
     private var tunnelInterface: IOInterface?
+
 
     init(
         _ ctx: PartoutLoggerContext,
@@ -46,6 +51,7 @@ public actor OpenVPNConnection {
         prng: PRNGProtocol,
         dns: DNSResolver,
         singBoxSidecar: SingBoxSidecar? = nil,
+        ydtunSidecar: YdtunSidecar? = nil,
         sessionFactory: @escaping () async throws -> OpenVPNSessionProtocol
     ) throws {
         self.ctx = ctx
@@ -59,10 +65,10 @@ public actor OpenVPNConnection {
         }
 
         var endpoints: [ExtendedEndpoint]
-        if singBoxSidecar != nil {
-            // When sing-box is active, OpenVPN connects to the local sidecar via TCP
+        if singBoxSidecar != nil || ydtunSidecar != nil {
+            // When a sidecar is active, OpenVPN connects to the local proxy via TCP
             // The actual port will be set after sidecar starts; use placeholder
-            pp_log(ctx, .openvpn, .notice, "SingBox: Will redirect OpenVPN through local sidecar")
+            pp_log(ctx, .openvpn, .notice, "Sidecar: Will redirect OpenVPN through local proxy")
             endpoints = [try ExtendedEndpoint("127.0.0.1", .init(.tcp, 0))]
         } else {
             guard let remotes = configuration.processedRemotes(prng: prng),
@@ -74,7 +80,23 @@ public actor OpenVPNConnection {
 
         self.configuration = try configuration.withModules(from: parameters.profile)
         self.singBoxSidecar = singBoxSidecar
+        self.ydtunSidecar = ydtunSidecar
         self.sessionFactory = sessionFactory
+
+        // Wire sub-status and health callbacks to tunnel environment
+        let env = environment
+        singBoxSidecar?.onSubStatus = { (status: String) in
+            env.setEnvironmentValue(status, forKey: TunnelEnvironmentKeys.connectionSubStatus)
+        }
+        ydtunSidecar?.onSubStatus = { (status: String) in
+            env.setEnvironmentValue(status, forKey: TunnelEnvironmentKeys.connectionSubStatus)
+        }
+        ydtunSidecar?.onAliveStatus = { (alive: Bool) in
+            env.setEnvironmentValue(alive, forKey: TunnelEnvironmentKeys.ydtunAlive)
+        }
+        ydtunSidecar?.onApiPort = { (port: UInt16) in
+            env.setEnvironmentValue(port, forKey: TunnelEnvironmentKeys.ydtunApiPort)
+        }
         self.dns = dns
 
         backend = CyclingConnection(
@@ -99,13 +121,18 @@ extension OpenVPNConnection: Connection {
 
     @discardableResult
     public func start() async throws -> Bool {
-        // Start sing-box sidecar if configured (matching OpenVPNService.startOpenVPN in ics-openvpn)
+        // Start sidecar if configured
         if let singBoxSidecar {
             let port = try await singBoxSidecar.start()
-            // Update backend endpoints to point to the sidecar's local port
+            let localEndpoint = try ExtendedEndpoint("127.0.0.1", .init(.tcp, port))
+            await backend.replaceEndpoints([localEndpoint])
+        } else if let ydtunSidecar {
+            let port = try await ydtunSidecar.start()
             let localEndpoint = try ExtendedEndpoint("127.0.0.1", .init(.tcp, port))
             await backend.replaceEndpoints([localEndpoint])
         }
+
+        environment.setEnvironmentValue("OpenVPN: connecting...", forKey: TunnelEnvironmentKeys.connectionSubStatus)
 
         var session: OpenVPNSessionProtocol?
         do {
@@ -113,6 +140,7 @@ extension OpenVPNConnection: Connection {
             return try await backend.start()
         } catch let error as PartoutError {
             await singBoxSidecar?.stop()
+            await ydtunSidecar?.stop()
             await session?.shutdown(error)
             if error.code == .exhaustedEndpoints, let reason = error.reason {
                 throw reason
@@ -120,6 +148,7 @@ extension OpenVPNConnection: Connection {
             throw error
         } catch {
             await singBoxSidecar?.stop()
+            await ydtunSidecar?.stop()
             await session?.shutdown(error)
             throw error
         }
@@ -128,6 +157,11 @@ extension OpenVPNConnection: Connection {
     public func stop(timeout: Int) async {
         await backend.stop(timeout: timeout)
         await singBoxSidecar?.stop()
+        await ydtunSidecar?.stop()
+        // Ensure health status is cleared after polling stops
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunAlive)
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunApiPort)
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.connectionSubStatus)
     }
 }
 
@@ -334,10 +368,13 @@ private extension OpenVPNConnection {
     nonisolated func onStatus(_ connectionStatus: ConnectionStatus) {
         switch connectionStatus {
         case .connected:
-            break
+            environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.connectionSubStatus)
 
         case .disconnected:
             environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.dataCount)
+            environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.connectionSubStatus)
+            environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunAlive)
+            environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunApiPort)
             environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.OpenVPN.serverConfiguration)
 
         default:
@@ -345,8 +382,12 @@ private extension OpenVPNConnection {
         }
     }
 
+
     nonisolated func onError(_ connectionError: Error) {
         environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.dataCount)
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.connectionSubStatus)
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunAlive)
+        environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.ydtunApiPort)
         environment.removeEnvironmentValue(forKey: TunnelEnvironmentKeys.OpenVPN.serverConfiguration)
     }
 }

@@ -559,7 +559,9 @@ private extension Negotiator {
                 return
             }
             reply = optionalReply
-            pp_log(ctx, .openvpn, .info, "Received PUSH_REPLY: \"\(reply)\"")
+            let replyStr = "\(reply)"
+            let replyPreview = replyStr.count > 200 ? String(replyStr.prefix(200)) + "...(\(replyStr.count) chars)" : replyStr
+            pp_log(ctx, .openvpn, .info, "Received PUSH_REPLY: \"\(replyPreview)\"")
 
             if let framing = reply.options.compressionFraming, let compression = reply.options.compressionAlgorithm {
                 switch compression {

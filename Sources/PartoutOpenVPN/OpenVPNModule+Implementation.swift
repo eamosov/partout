@@ -12,14 +12,18 @@ extension OpenVPNModule {
 
         public let singBoxRunnerBlock: (@Sendable () -> SingBoxRunner)?
 
+        public let ydtunRunnerBlock: (@Sendable () -> YdtunRunner)?
+
         public init(
             importerBlock: @escaping @Sendable () -> ModuleImporter,
             connectionBlock: @escaping @Sendable (ConnectionParameters, OpenVPNModule) throws -> Connection,
-            singBoxRunnerBlock: (@Sendable () -> SingBoxRunner)? = nil
+            singBoxRunnerBlock: (@Sendable () -> SingBoxRunner)? = nil,
+            ydtunRunnerBlock: (@Sendable () -> YdtunRunner)? = nil
         ) {
             self.importerBlock = importerBlock
             self.connectionBlock = connectionBlock
             self.singBoxRunnerBlock = singBoxRunnerBlock
+            self.ydtunRunnerBlock = ydtunRunnerBlock
         }
     }
 }

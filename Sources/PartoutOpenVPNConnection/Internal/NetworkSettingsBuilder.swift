@@ -175,13 +175,16 @@ private extension NetworkSettingsBuilder {
         }
 
         let routes = computedRoutes.compactMap {
-            let route = Route($0.destination, $0.gateway ?? defaultRouteGateway)
-            if let destination = route.destination {
-                pp_log(ctx, .openvpn, .info, "\tIPv4: Add route \(destination.description) -> \(route.gateway?.description ?? "*")")
-            } else {
-                pp_log(ctx, .openvpn, .info, "\tIPv4: Set default gateway -> \(route.gateway?.description ?? "*")")
-            }
-            return route
+            Route($0.destination, $0.gateway ?? defaultRouteGateway)
+        }
+        // Aggregate route count per gateway
+        var routeCountByGateway: [String: Int] = [:]
+        for route in routes {
+            let gw = route.gateway?.description ?? "*"
+            routeCountByGateway[gw, default: 0] += 1
+        }
+        for (gw, count) in routeCountByGateway.sorted(by: { $0.value > $1.value }) {
+            pp_log(ctx, .openvpn, .info, "\tIPv4: \(count) route(s) -> \(gw)")
         }
         return ipv4.including(routes: routes)
     }
@@ -199,13 +202,16 @@ private extension NetworkSettingsBuilder {
         }
 
         let routes = computedRoutes.compactMap {
-            let route = Route($0.destination, $0.gateway ?? defaultRouteGateway)
-            if let destination = route.destination {
-                pp_log(ctx, .openvpn, .info, "\tIPv6: Add route \(destination.description) -> \(route.gateway?.description ?? "*")")
-            } else {
-                pp_log(ctx, .openvpn, .info, "\tIPv6: Set default gateway -> \(route.gateway?.description ?? "*")")
-            }
-            return route
+            Route($0.destination, $0.gateway ?? defaultRouteGateway)
+        }
+        // Aggregate route count per gateway
+        var routeCountByGateway6: [String: Int] = [:]
+        for route in routes {
+            let gw = route.gateway?.description ?? "*"
+            routeCountByGateway6[gw, default: 0] += 1
+        }
+        for (gw, count) in routeCountByGateway6.sorted(by: { $0.value > $1.value }) {
+            pp_log(ctx, .openvpn, .info, "\tIPv6: \(count) route(s) -> \(gw)")
         }
         return ipv6.including(routes: routes)
     }

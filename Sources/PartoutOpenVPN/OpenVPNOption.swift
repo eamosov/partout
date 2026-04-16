@@ -115,6 +115,10 @@ extension OpenVPN {
         // MARK: SingBox
 
         case singBox = "^(setenv-safe |setenv )?sb_(enable|override_address|override_port|server_port|uuid|tls_server_name|tls_public_key|tls_short_id) +[^ ]+"
+
+        // MARK: Ydtun (Telemost)
+
+        case telemost = "^(setenv-safe |setenv )?telemost_(enable|urls|tunnel_key|force_tcp_relay|log_level|net_gateway) +[^ ]+"
     }
 }
 

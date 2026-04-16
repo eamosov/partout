@@ -9,6 +9,7 @@ extension OpenVPNConnection {
         module: OpenVPNModule,
         cachesURL: URL,
         singBoxRunner: SingBoxRunner? = nil,
+        ydtunRunner: YdtunRunner? = nil,
         options: Options = .init()
     ) throws {
         guard let configuration = module.configuration else {
@@ -23,6 +24,19 @@ extension OpenVPNConnection {
             sidecar = SingBoxSidecar(ctx, configuration: sbConfig, runner: runner)
         } else {
             sidecar = nil
+        }
+
+        // Set up ydtun sidecar if configured (mutually exclusive with sing-box)
+        let ydtunSidecar: YdtunSidecar?
+        if sidecar == nil,
+           let ytConfig = YdtunSidecar.Configuration(from: configuration),
+           let runner = ydtunRunner {
+            ydtunSidecar = YdtunSidecar(ctx, configuration: ytConfig, runner: runner)
+        } else {
+            if sidecar != nil && configuration.telemostEnabled == true {
+                pp_log(ctx, .openvpn, .notice, "Ydtun: Telemost configured but ignored — sing-box takes precedence")
+            }
+            ydtunSidecar = nil
         }
 
         // Hardcode portable implementations
@@ -54,6 +68,7 @@ extension OpenVPNConnection {
             prng: prng,
             dns: dns,
             singBoxSidecar: sidecar,
+            ydtunSidecar: ydtunSidecar,
             sessionFactory: sessionFactory
         )
     }

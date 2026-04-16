@@ -270,6 +270,26 @@ extension OpenVPN {
         /// - Seealso: `Configuration.Builder.singBoxOverridePort`
         public let singBoxOverridePort: UInt16?
 
+        // MARK: Ydtun (Telemost)
+
+        /// - Seealso: `Configuration.Builder.telemostEnabled`
+        public let telemostEnabled: Bool?
+
+        /// - Seealso: `Configuration.Builder.telemostUrls`
+        public let telemostUrls: String?
+
+        /// - Seealso: `Configuration.Builder.telemostTunnelKey`
+        public let telemostTunnelKey: String?
+
+        /// - Seealso: `Configuration.Builder.telemostForceTcpRelay`
+        public let telemostForceTcpRelay: Bool?
+
+        /// - Seealso: `Configuration.Builder.telemostLogLevel`
+        public let telemostLogLevel: Int?
+
+        /// - Seealso: `Configuration.Builder.telemostNetGateway`
+        public let telemostNetGateway: String?
+
         // MARK: Shortcuts
 
         public var fallbackCipher: Cipher {
@@ -471,6 +491,26 @@ extension OpenVPN.Configuration {
         /// The real OpenVPN server port that sing-box forwards to.
         public var singBoxOverridePort: UInt16?
 
+        // MARK: Ydtun (Telemost)
+
+        /// Whether ydtun/Telemost tunnel is enabled.
+        public var telemostEnabled: Bool?
+
+        /// Comma-separated Telemost meeting URLs.
+        public var telemostUrls: String?
+
+        /// Tunnel encryption key.
+        public var telemostTunnelKey: String?
+
+        /// Force TURN TCP relay instead of UDP.
+        public var telemostForceTcpRelay: Bool?
+
+        /// Log level: 0=info, 1=debug, 2=trace.
+        public var telemostLogLevel: Int?
+
+        /// Comma-separated CIDRs to exclude from VPN routing.
+        public var telemostNetGateway: String?
+
         /**
          Creates a `Configuration.Builder`.
 
@@ -554,7 +594,13 @@ extension OpenVPN.Configuration {
                 singBoxTLSPublicKey: singBoxTLSPublicKey,
                 singBoxTLSShortId: singBoxTLSShortId,
                 singBoxOverrideAddress: singBoxOverrideAddress,
-                singBoxOverridePort: singBoxOverridePort
+                singBoxOverridePort: singBoxOverridePort,
+                telemostEnabled: telemostEnabled,
+                telemostUrls: telemostUrls,
+                telemostTunnelKey: telemostTunnelKey,
+                telemostForceTcpRelay: telemostForceTcpRelay,
+                telemostLogLevel: telemostLogLevel,
+                telemostNetGateway: telemostNetGateway
             )
         }
     }
@@ -619,6 +665,12 @@ extension OpenVPN.Configuration {
         builder.singBoxTLSShortId = singBoxTLSShortId
         builder.singBoxOverrideAddress = singBoxOverrideAddress
         builder.singBoxOverridePort = singBoxOverridePort
+        builder.telemostEnabled = telemostEnabled
+        builder.telemostUrls = telemostUrls
+        builder.telemostTunnelKey = telemostTunnelKey
+        builder.telemostForceTcpRelay = telemostForceTcpRelay
+        builder.telemostLogLevel = telemostLogLevel
+        builder.telemostNetGateway = telemostNetGateway
         return builder
     }
 }
@@ -636,10 +688,10 @@ extension OpenVPN.Configuration {
             pp_log(ctx, .openvpn, .notice, "\tIPv6: \(ipv6?.asSensitiveAddress(ctx) ?? "not configured")")
         }
         if let routes4 {
-            pp_log(ctx, .openvpn, .notice, "\tRoutes (IPv4): \(routes4)")
+            pp_log(ctx, .openvpn, .notice, "\tRoutes (IPv4): \(routes4.count) route(s)")
         }
         if let routes6 {
-            pp_log(ctx, .openvpn, .notice, "\tRoutes (IPv6): \(routes6)")
+            pp_log(ctx, .openvpn, .notice, "\tRoutes (IPv6): \(routes6.count) route(s)")
         }
 
         if let cipher {
@@ -770,20 +822,13 @@ extension OpenVPN.Configuration {
             pp_log(ctx, .openvpn, .notice, "\tNot pulled: \(noPullMask.map(\.rawValue))")
         }
 
+        // Transport config (SingBox/Telemost) — logged at debug level
+        // The active transport is logged by the sidecar at notice level
         if singBoxEnabled ?? false {
-            pp_log(ctx, .openvpn, .notice, "\tSingBox: enabled")
-            if let singBoxServerPort {
-                pp_log(ctx, .openvpn, .notice, "\tSingBox server port: \(singBoxServerPort)")
-            }
-            if let singBoxTLSServerName {
-                pp_log(ctx, .openvpn, .notice, "\tSingBox TLS server name: \(singBoxTLSServerName.asSensitiveAddress(ctx))")
-            }
-            if let singBoxOverrideAddress {
-                pp_log(ctx, .openvpn, .notice, "\tSingBox override address: \(singBoxOverrideAddress.asSensitiveAddress(ctx))")
-            }
-            if let singBoxOverridePort {
-                pp_log(ctx, .openvpn, .notice, "\tSingBox override port: \(singBoxOverridePort)")
-            }
+            pp_log(ctx, .openvpn, .debug, "\tSingBox config: enabled, port=\(singBoxServerPort ?? 443)")
+        }
+        if telemostEnabled ?? false {
+            pp_log(ctx, .openvpn, .debug, "\tTelemost config: enabled")
         }
     }
 }

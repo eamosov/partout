@@ -55,7 +55,10 @@ public final class NETunnelController: TunnelController {
             throw PartoutError(.releasedObject)
         }
         let tunnelSettings = profile.networkSettings(with: info, options: options)
-        pp_log_id(profile.id, .os, .info, "Commit tunnel settings: \(tunnelSettings)")
+        let ipv4Routes = tunnelSettings.ipv4Settings?.includedRoutes?.count ?? 0
+        let ipv6Routes = tunnelSettings.ipv6Settings?.includedRoutes?.count ?? 0
+        let dns = tunnelSettings.dnsSettings?.servers.joined(separator: ", ") ?? "none"
+        pp_log_id(profile.id, .os, .info, "Commit tunnel settings: remote=\(tunnelSettings.tunnelRemoteAddress), IPv4 routes=\(ipv4Routes), IPv6 routes=\(ipv6Routes), DNS=[\(dns)]")
         try await provider.setTunnelNetworkSettings(tunnelSettings)
 
         return tun

@@ -53,6 +53,9 @@ public final class SingBoxSidecar: Sendable {
     private let configuration: Configuration
     private let runner: SingBoxRunner
 
+    /// Callback to update connection sub-status in UI.
+    nonisolated(unsafe) public var onSubStatus: (@Sendable (String) -> Void)?
+
     nonisolated(unsafe) private var _localPort: UInt16 = 0
 
     /// The local TCP port that OpenVPN should connect to.
@@ -76,6 +79,7 @@ public final class SingBoxSidecar: Sendable {
         let port = try findFreePort()
         let configJSON = generateConfig(listenPort: port)
 
+        onSubStatus?("SingBox: starting...")
         pp_log(ctx, .openvpn, .notice, "SingBox: Starting sidecar on 127.0.0.1:\(port)")
         pp_log(ctx, .openvpn, .info, "SingBox: Override \(configuration.overrideAddress):\(configuration.overridePort)")
         pp_log(ctx, .openvpn, .debug, "SingBox: Config JSON: \(configJSON)")
@@ -86,6 +90,7 @@ public final class SingBoxSidecar: Sendable {
         try await waitForPort(port, timeout: 10.0)
 
         _localPort = port
+        onSubStatus?("SingBox: ready")
         pp_log(ctx, .openvpn, .notice, "SingBox: Sidecar ready on port \(port)")
         return port
     }
@@ -118,10 +123,8 @@ extension SingBoxSidecar.Configuration {
     /// Matching ics-openvpn's SingBoxProcess.generateConfig():
     /// - `server` = conn.mServerName (original remote = VLESS proxy)
     /// - `override_address` = conn.mSingBoxOverrideAddress (real OpenVPN behind VLESS)
+    /// Note: does NOT check singBoxEnabled — the caller decides whether sing-box should be used.
     public init?(from openvpn: OpenVPN.Configuration) {
-        guard openvpn.singBoxEnabled == true else {
-            return nil
-        }
         guard let uuid = openvpn.singBoxUUID,
               let tlsServerName = openvpn.singBoxTLSServerName,
               let tlsPublicKey = openvpn.singBoxTLSPublicKey,
